@@ -33,7 +33,7 @@ from prepare import CACHE_DIR, get_token_bytes
 TIME_BUDGET_SECONDS = 300
 
 # Model architecture
-ASPECT_RATIO = 40
+ASPECT_RATIO = 48
 HEAD_DIM = 64
 DEPTH = 8
 HIDDEN_DIM_MULTIPLE = 128

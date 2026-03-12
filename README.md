@@ -39,6 +39,42 @@ uv run train.py
 
 If the above commands all work ok, your setup is working and you can go into autonomous research mode.
 
+## ANE Quick Start (Apple Silicon)
+
+This repo is still upstream CUDA-first, but this fork also includes an ANE-backed path for Apple Silicon research.
+
+Requirements:
+
+- macOS on Apple Silicon
+- a local checkout of [`maderix/ANE`](https://github.com/maderix/ANE)
+- `uv sync` with the platform-specific PyTorch source in `pyproject.toml`
+
+Setup:
+
+```bash
+# 1. Install Python dependencies (macOS now resolves torch from the CPU index)
+uv sync
+
+# 2. Prepare the upstream cache (tokenizer + parquet shards)
+uv run prepare.py
+
+# 3. Materialize ANE-friendly uint16 token streams
+uv run prepare_ane.py
+
+# 4. Point to your ANE checkout if it is not at ../ANE or /tmp/ANE
+export ANE_HOME=/path/to/ANE
+
+# 5. Run one ANE experiment
+uv run train_ane.py
+```
+
+Notes:
+
+- `train_ane.py` keeps the "single file to hack" workflow, but it is an ANE-specific fork of the training loop.
+- It trains through the external ANE Objective-C runtime, then evaluates the emitted checkpoint in Python.
+- By default it runs a short calibration pass first, then picks a step count that lands near a fixed 300-second training budget.
+- The printed `val_bpb` is ANE-local: it uses a shorter context length and a smaller validation token budget than upstream, so compare it only against other ANE runs from this fork.
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
@@ -49,12 +85,17 @@ Hi have a look at program.md and let's kick off a new experiment! let's do the s
 
 The `program.md` file is essentially a super lightweight "skill".
 
+For the ANE fork, point the agent at `program_ane.md` instead.
+
 ## Project structure
 
 ```
 prepare.py      — constants, data prep + runtime utilities (do not modify)
 train.py        — model, optimizer, training loop (agent modifies this)
 program.md      — agent instructions
+prepare_ane.py  — one-time ANE token stream conversion
+train_ane.py    — ANE-backed train/eval loop
+program_ane.md  — ANE-specific research instructions
 pyproject.toml  — dependencies
 ```
 
@@ -66,7 +107,7 @@ pyproject.toml  — dependencies
 
 ## Platform support
 
-This code currently requires that you have a single NVIDIA GPU. In principle it is quite possible to support CPU, MPS and other platforms but this would also bloat the code. I'm not 100% sure that I want to take this on personally right now. People can reference (or have their agents reference) the full/parent nanochat repository that has wider platform support and shows the various solutions (e.g. a Flash Attention 3 kernels fallback implementation, generic device support, autodetection, etc.), feel free to create forks or discussions for other platforms and I'm happy to link to them here in the README in some new notable forks section or etc.
+`train.py` still requires a single NVIDIA GPU. This fork also adds an ANE path via `train_ane.py`, but it is intentionally a separate workflow because the backend, checkpoint format, and validation budget differ from upstream CUDA autoresearch. In principle it is quite possible to support CPU, MPS and other platforms more directly, but that would also bloat the code. I'm not 100% sure that I want to take this on personally right now. People can reference (or have their agents reference) the full/parent nanochat repository that has wider platform support and shows the various solutions (e.g. a Flash Attention 3 kernels fallback implementation, generic device support, autodetection, etc.), feel free to create forks or discussions for other platforms and I'm happy to link to them here in the README in some new notable forks section or etc.
 
 Seeing as there seems to be a lot of interest in tinkering with autoresearch on much smaller compute platforms than an H100, a few extra words. If you're going to try running autoresearch on smaller computers (Macbooks etc.), I'd recommend one of the forks below. On top of this, here are some recommendations for how to tune the defaults for much smaller models for aspiring forks:
 

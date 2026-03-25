@@ -14,6 +14,7 @@ queue/
 runs/
 runs_canary/
 launchd_logs/
+tools/inference/runs_*
 tools/inference/runs/
 tools/inference/runs_canary/
 tools/inference/launchd_logs/

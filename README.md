@@ -1,222 +1,99 @@
 # autoresearch
 
-![teaser](progress.png)
+This repo is now centered on inference research for local editing workflows.
 
-*One day, frontier AI research used to be done by meat computers in between eating, sleeping, having other fun, and synchronizing once in a while using sound wave interconnect in the ritual of "group meeting". That era is long gone. Research is now entirely the domain of autonomous swarms of AI agents running across compute cluster megastructures in the skies. The agents claim that we are now in the 10,205th generation of the code base, in any case no one could tell if that's right or wrong as the "code" is now a self-modifying binary that has grown beyond human comprehension. This repo is the story of how it all began. -@karpathy, March 2026*.
+The active story is:
+- grammar autotuning
+- RLM editing research
+- product case curation / mining
+- Studio as the wrapper over the whole stack
 
-The idea: give an AI agent a small but real LLM training setup and let it experiment autonomously overnight. It modifies the code, trains for 5 minutes, checks if the result improved, keeps or discards, and repeats. You wake up in the morning to a log of experiments and (hopefully) a better model. The training code here is a simplified single-GPU implementation of [nanochat](https://github.com/karpathy/nanochat). The core idea is that you're not touching any of the Python files like you normally would as a researcher. Instead, you are programming the `program.md` Markdown files that provide context to the AI agents and set up your autonomous research org. The default `program.md` in this repo is intentionally kept as a bare bones baseline, though it's obvious how one would iterate on it over time to find the "research org code" that achieves the fastest research progress, how you'd add more agents to the mix, etc. A bit more context on this project is here in this [tweet](https://x.com/karpathy/status/2029701092347630069).
+Older training-oriented paths were removed from the repo to simplify focus.
 
-## How it works
+## Active paths
 
-The repo is deliberately kept small and only really has three files that matter:
+1. Grammar autotuning
+- Purpose: short Ethertext-style cleanup/edit benchmarks
+- Key files:
+  - `tools/inference/prepare_grammar_bench.py`
+  - `tools/inference/run_grammar_bench.py`
+  - `tools/inference/overnight_grammar.py`
 
-- **`prepare.py`** — fixed constants, one-time data prep (downloads training data, trains a BPE tokenizer), and runtime utilities (dataloader, evaluation). Not modified.
-- **`train.py`** — the single file the agent edits. Contains the full GPT model, optimizer (Muon + AdamW), and training loop. Everything is fair game: architecture, hyperparameters, optimizer, batch size, etc. **This file is edited and iterated on by the agent**.
-- **`program.md`** — baseline instructions for one agent. Point your agent here and let it go. **This file is edited and iterated on by the human**.
+2. RLM editing research
+- Purpose: memory-aware editing with glossary/context/distractor constraints
+- Includes stricter recursive-controller experiments and Research Claw Lite comparisons
+- Key files:
+  - `tools/inference/research_claw_lite.py`
+  - `tools/inference/analyze_rlm_sweep.py`
+  - benchmark files under `tools/inference/benchmarks/`
 
-By design, training runs for a **fixed 5-minute time budget** (wall clock, excluding startup/compilation), regardless of the details of your compute. The metric is **val_bpb** (validation bits per byte) — lower is better, and vocab-size-independent so architectural changes are fairly compared.
+3. Product case curation / mining
+- Purpose: curate real examples, mine failures, and turn them into better benchmarks
+- Key files:
+  - `tools/inference/curate_product_cases.py`
+  - `tools/inference/mine_failures.py`
+  - tests under `tests/`
 
-If you are new to neural networks, this ["Dummy's Guide"](https://x.com/hooeem/status/2030720614752039185) looks pretty good for a lot more context.
+4. Studio wrapper
+- Purpose: try the current best product/deep-memory configs on real text
+- Key files:
+  - `tools/inference/studio_server.py`
+  - `tools/inference/studio/`
 
-## Quick start
+In short: the repo is functionally centered on `tools/inference/`.
 
-**Requirements:** A single NVIDIA GPU (tested on H100), Python 3.10+, [uv](https://docs.astral.sh/uv/).
+## Last major thing
+
+The last major expansion here was Research Claw Lite in `tools/inference/`, i.e. the compact candidate/model comparison and promotion workflow for inference experiments.
+
+## Inference autotuning quick start
+
+Install dependencies:
 
 ```bash
-
-# 1. Install uv project manager (if you don't already have it)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 2. Install dependencies
 uv sync
-
-# 3. Download data and train tokenizer (one-time, ~2 min)
-uv run prepare.py
-
-# 4. Manually run a single training experiment (~5 min)
-uv run train.py
 ```
 
-If the above commands all work ok, your setup is working and you can go into autonomous research mode.
-
-## ANE Quick Start (Apple Silicon)
-
-This repo is still upstream CUDA-first, but this fork also includes an ANE-backed path for Apple Silicon research.
-
-Requirements:
-
-- macOS on Apple Silicon
-- a local checkout of [`maderix/ANE`](https://github.com/maderix/ANE)
-- `uv sync` with the platform-specific PyTorch source in `pyproject.toml`
-
-Setup:
+Prepare the grammar benchmark:
 
 ```bash
-# 1. Install Python dependencies (macOS now resolves torch from the CPU index)
-uv sync
-
-# 2. Prepare the upstream cache (tokenizer + parquet shards)
-uv run prepare.py
-
-# 3. Materialize ANE-friendly uint16 token streams
-uv run prepare_ane.py
-
-# 4. Point to your ANE checkout if it is not at ../ANE or /tmp/ANE
-export ANE_HOME=/path/to/ANE
-
-# 5. Run one ANE experiment
-uv run train_ane.py
+uv run tools/inference/prepare_grammar_bench.py
 ```
 
-Notes:
+Run a single benchmark:
 
-- `train_ane.py` keeps the "single file to hack" workflow, but it is an ANE-specific fork of the training loop.
-- It trains through the external ANE Objective-C runtime, then evaluates the emitted checkpoint in Python.
-- By default it runs a short calibration pass first, then picks a step count that lands near a fixed 300-second training budget.
-- The printed `val_bpb` is ANE-local: it uses a shorter context length and a smaller validation token budget than upstream, so compare it only against other ANE runs from this fork.
+```bash
+uv run tools/inference/run_grammar_bench.py \
+  --backend ollama \
+  --model mistral:latest \
+  --controller rlm_lite \
+  --benchmark tools/inference/benchmarks/grammar_fixer_working.jsonl
+```
 
-## Inference Autotuning (Apple Silicon)
-
-This repo also now includes an inference autotuning toolkit for local grammar/text-fixer workflows, aimed at Ethertext-style editing on Apple Silicon.
-
-The toolkit lives under `tools/inference/` and supports:
-
-- benchmark prep via `tools/inference/prepare_grammar_bench.py`
-- single-run evaluation via `tools/inference/run_grammar_bench.py`
-- autonomous sweeps via `tools/inference/overnight_grammar.py`
-- unattended launchd runs via `tools/inference/launch_grammar_sweep.sh`
-- a local product wrapper via `tools/inference/studio_server.py`
-
-The first target backend is Ollama, with an optional MLX adapter and a small set of RLM-style controllers (`rlm_lite`, `rlm_adaptive`, `rlm_recursive`) for memory-aware editing experiments.
-
-To try the current best controller on real examples in a browser:
+Start Studio:
 
 ```bash
 uv run tools/inference/studio_server.py
 ```
 
-## Active paths
+For deeper usage, see:
+- `tools/inference/README.md`
 
-If you ignore older training forks and supporting experiments, the active path in this repo is now:
+## Repo shape
 
-1. Grammar autotuning
-   - short Ethertext-style cleanup/edit benchmarks
-   - primary files:
-     - `tools/inference/prepare_grammar_bench.py`
-     - `tools/inference/run_grammar_bench.py`
-     - `tools/inference/overnight_grammar.py`
-
-2. RLM editing research
-   - memory-aware editing with glossary/context/distractor constraints
-   - includes stricter recursive-controller experiments and Research Claw Lite comparisons
-   - primary files:
-     - `tools/inference/research_claw_lite.py`
-     - `tools/inference/analyze_rlm_sweep.py`
-     - benchmark files under `tools/inference/benchmarks/`
-
-3. Product case curation / mining
-   - curate real examples, mine failures, and turn them into better benchmarks
-   - primary files:
-     - `tools/inference/curate_product_cases.py`
-     - `tools/inference/mine_failures.py`
-     - tests under `tests/`
-
-4. Studio wrapper
-   - `tools/inference/studio_server.py` and `tools/inference/studio/`
-   - this wraps the whole inference stack so the current best configs can be tried on real text
-
-In short: the repo is functionally centered on `tools/inference/` now.
-
-## Legacy / side paths
-
-These still exist, but they are no longer the clearest "main path" for the repo:
-
-- Core CUDA training loop
-  - `prepare.py`, `train.py`, `program.md`
-  - original upstream-style 5-minute autonomous training loop
-
-- ANE training fork
-  - `prepare_ane.py`, `train_ane.py`, `program_ane.md`, top-level `results.tsv`
-  - Apple Neural Engine training experiments
-  - current branch still reflects this work: `autoresearch/mar11-ane`
-
-- MLX training helpers
-  - `tools/mlx/*`
-  - MLX-only training/sweep support for Apple Silicon
-  - useful, but currently more of a support/experimental path than the repo’s main story
-
-## Possible archive candidates
-
-If you want to simplify the repo later, the most likely archive candidates are:
-
-- top-level training/autoresearch fork files if inference work is now the real product direction:
-  - `prepare.py`
-  - `train.py`
-  - `program.md`
-  - `prepare_ane.py`
-  - `train_ane.py`
-  - `program_ane.md`
-  - top-level `results.tsv`
-
-- MLX training helpers if you want to keep only inference-facing MLX work:
-  - `tools/mlx/*`
-
-I have not deleted anything. If you want, the next cleanup step could be:
-- commit current state
-- push branch
-- move/archive or remove one legacy path at a time
-
-## Running the agent
-
-Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
-
-```
-Hi have a look at program.md and let's kick off a new experiment! let's do the setup first.
+```text
+README.md
+pyproject.toml
+uv.lock
+tests/
+tools/inference/
 ```
 
-The `program.md` file is essentially a super lightweight "skill".
+## Notes
 
-For the ANE fork, point the agent at `program_ane.md` instead.
-
-## Project structure
-
-```
-prepare.py      — constants, data prep + runtime utilities (do not modify)
-train.py        — model, optimizer, training loop (agent modifies this)
-program.md      — agent instructions
-prepare_ane.py  — one-time ANE token stream conversion
-train_ane.py    — ANE-backed train/eval loop
-program_ane.md  — ANE-specific research instructions
-pyproject.toml  — dependencies
-```
-
-## Design choices
-
-- **Single file to modify.** The agent only touches `train.py`. This keeps the scope manageable and diffs reviewable.
-- **Fixed time budget.** Training always runs for exactly 5 minutes, regardless of your specific platform. This means you can expect approx 12 experiments/hour and approx 100 experiments while you sleep. There are two upsides of this design decision. First, this makes experiments directly comparable regardless of what the agent changes (model size, batch size, architecture, etc). Second, this means that autoresearch will find the most optimal model for your platform in that time budget. The downside is that your runs (and results) become not comparable to other people running on other compute platforms.
-- **Self-contained.** No external dependencies beyond PyTorch and a few small packages. No distributed training, no complex configs. One GPU, one file, one metric.
-
-## Platform support
-
-`train.py` still requires a single NVIDIA GPU. This fork also adds an ANE path via `train_ane.py`, but it is intentionally a separate workflow because the backend, checkpoint format, and validation budget differ from upstream CUDA autoresearch. In principle it is quite possible to support CPU, MPS and other platforms more directly, but that would also bloat the code. I'm not 100% sure that I want to take this on personally right now. People can reference (or have their agents reference) the full/parent nanochat repository that has wider platform support and shows the various solutions (e.g. a Flash Attention 3 kernels fallback implementation, generic device support, autodetection, etc.), feel free to create forks or discussions for other platforms and I'm happy to link to them here in the README in some new notable forks section or etc.
-
-Seeing as there seems to be a lot of interest in tinkering with autoresearch on much smaller compute platforms than an H100, a few extra words. If you're going to try running autoresearch on smaller computers (Macbooks etc.), I'd recommend one of the forks below. On top of this, here are some recommendations for how to tune the defaults for much smaller models for aspiring forks:
-
-1. To get half-decent results I'd use a dataset with a lot less entropy, e.g. this [TinyStories dataset](https://huggingface.co/datasets/karpathy/tinystories-gpt4-clean). These are GPT-4 generated short stories. Because the data is a lot narrower in scope, you will see reasonable results with a lot smaller models (if you try to sample from them after training).
-2. You might experiment with decreasing `vocab_size`, e.g. from 8192 down to 4096, 2048, 1024, or even - simply byte-level tokenizer with 256 possibly bytes after utf-8 encoding.
-3. In `prepare.py`, you'll want to lower `MAX_SEQ_LEN` a lot, depending on the computer even down to 256 etc. As you lower `MAX_SEQ_LEN`, you may want to experiment with increasing `DEVICE_BATCH_SIZE` in `train.py` slightly to compensate. The number of tokens per fwd/bwd pass is the product of these two.
-4. Also in `prepare.py`, you'll want to decrease `EVAL_TOKENS` so that your validation loss is evaluated on a lot less data.
-5. In `train.py`, the primary single knob that controls model complexity is the `DEPTH` (default 8, here). A lot of variables are just functions of this, so e.g. lower it down to e.g. 4.
-6. You'll want to most likely use `WINDOW_PATTERN` of just "L", because "SSSL" uses alternating banded attention pattern that may be very inefficient for you. Try it.
-7. You'll want to lower `TOTAL_BATCH_SIZE` a lot, but keep it powers of 2, e.g. down to `2**14` (~16K) or so even, hard to tell.
-
-I think these would be the reasonable hyperparameters to play with. Ask your favorite coding agent for help and copy paste them this guide, as well as the full source code.
-
-## Notable forks
-
-- [miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) (MacOS)
-- [trevin-creator/autoresearch-mlx](https://github.com/trevin-creator/autoresearch-mlx) (MacOS)
-- [jsegov/autoresearch-win-rtx](https://github.com/jsegov/autoresearch-win-rtx) (Windows)
+- MLX-heavy local runs should be done conservatively.
+- Run one heavy local model at a time.
+- The main product/research surface is now inference, not training.
 
 ## License
 

@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "memory_flat",
+  "description": "memory_flat",
+  "error": "benchmark subprocess failed with exit code 1",
+  "model": "mistral:latest",
+  "run_name": "002_memory_flat",
+  "wall_seconds": 0.1
+}

@@ -1,0 +1,41 @@
+{
+  "qwen": {
+    "label": "Qwen mxfp4",
+    "notes": "Strong quality-focused practical MLX preset; best Qwen result on the current focused 12-example strict RLM run used memory_flat_k2.",
+    "config": {
+      "backend": "mlx",
+      "model": "nightmedia/Qwen3.5-122B-A10B-Text-mxfp4-mlx",
+      "controller": "memory_flat",
+      "memory_top_k": 2,
+      "temperature": 0.0,
+      "num_ctx": 2048,
+      "max_tokens": 96
+    }
+  },
+  "gpt-oss": {
+    "label": "gpt-oss Q8",
+    "notes": "Fastest practical MLX preset; weaker on the current strict autoresearch RLM slices.",
+    "config": {
+      "backend": "mlx",
+      "model": "mlx-community/gpt-oss-120b-MXFP4-Q8",
+      "controller": "memory_flat",
+      "memory_top_k": 2,
+      "temperature": 0.0,
+      "num_ctx": 1536,
+      "max_tokens": 72
+    }
+  },
+  "llama": {
+    "label": "Llama 4 4bit",
+    "notes": "Current best strict autoresearch RLM preset on the focused 12-example run.",
+    "config": {
+      "backend": "mlx",
+      "model": "mlx-community/Llama-4-Scout-17B-16E-Instruct-4bit",
+      "controller": "rlm_lite",
+      "memory_top_k": 3,
+      "temperature": 0.0,
+      "num_ctx": 2048,
+      "max_tokens": 96
+    }
+  }
+}

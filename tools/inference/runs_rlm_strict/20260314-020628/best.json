@@ -1,0 +1,41 @@
+{
+  "config": {
+    "backend": "ollama",
+    "controller": "rlm_recursive",
+    "max_tokens": 96,
+    "memory_top_k": 2,
+    "model": "mistral:latest",
+    "num_ctx": 2048,
+    "temperature": 0.0
+  },
+  "summary": {
+    "avg_constraint_score": 0.96875,
+    "avg_decode_tok_per_s": 28.68737023378971,
+    "avg_forbidden_score": 0.875,
+    "avg_latency_ms": 8137.173979755971,
+    "avg_preserve_score": 1.0,
+    "avg_quality_score": 0.9476104724947628,
+    "avg_reference_score": 0.9176734305810712,
+    "avg_required_score": 1.0,
+    "avg_restraint_score": 0.9700641414612015,
+    "avg_strict_quality_score": 0.9163604724947628,
+    "avg_structure_score": 1.0,
+    "avg_subcalls": 4.25,
+    "avg_ttft_ms": 2370.6082807499997,
+    "backend": "ollama",
+    "benchmark_path": "tools/inference/benchmarks/rlm_editor_strict_working.jsonl",
+    "controller": "rlm_recursive",
+    "description": "top2",
+    "hard_avg_quality_score": 0.9146560914330404,
+    "hard_avg_strict_quality_score": 0.9146560914330404,
+    "hard_num_examples": 4,
+    "hard_pass_rate": 0.5,
+    "model": "mistral:latest",
+    "num_examples": 8,
+    "p95_latency_ms": 10895.793584000785,
+    "pass_rate": 0.625,
+    "peak_memory_mb": null,
+    "run_name": "004_top2",
+    "wall_seconds": 65.2
+  }
+}

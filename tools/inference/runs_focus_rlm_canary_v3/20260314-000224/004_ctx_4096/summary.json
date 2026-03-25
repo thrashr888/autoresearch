@@ -1,0 +1,21 @@
+{
+  "avg_decode_tok_per_s": 27.544536488381222,
+  "avg_latency_ms": 10213.347977768326,
+  "avg_preserve_score": 1.0,
+  "avg_quality_score": 0.9720933534264813,
+  "avg_reference_score": 0.9568670754436306,
+  "avg_restraint_score": 0.986141338013286,
+  "avg_structure_score": 0.9935897435897435,
+  "avg_subcalls": 4.769230769230769,
+  "avg_ttft_ms": 2639.513480846154,
+  "backend": "ollama",
+  "benchmark_path": "tools/inference/benchmarks/rlm_editor_working.jsonl",
+  "controller": "rlm_recursive",
+  "description": "ctx_4096",
+  "model": "mistral:latest",
+  "num_examples": 13,
+  "p95_latency_ms": 13745.667208990199,
+  "peak_memory_mb": null,
+  "run_name": "004_ctx_4096",
+  "wall_seconds": 132.9
+}

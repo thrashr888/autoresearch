@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "direct",
+  "description": "baseline",
+  "error": "benchmark subprocess failed with exit code 1",
+  "model": "mistral:latest",
+  "run_name": "001_baseline",
+  "wall_seconds": 0.1
+}

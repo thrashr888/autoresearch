@@ -1,0 +1,16 @@
+{
+  "config": {
+    "backend": "ollama",
+    "controller": "rlm_recursive",
+    "max_tokens": 128,
+    "memory_top_k": 2,
+    "model": "mistral:latest",
+    "num_ctx": 4096,
+    "temperature": 0.0
+  },
+  "description": "max_tokens=128,num_ctx=4096",
+  "run": 16,
+  "run_dir": "tools/inference/runs_rlm_strict/20260314-015446/016_max_tokens-128-num_ctx-4096",
+  "run_name": "016_max_tokens-128-num_ctx-4096",
+  "state": "running"
+}

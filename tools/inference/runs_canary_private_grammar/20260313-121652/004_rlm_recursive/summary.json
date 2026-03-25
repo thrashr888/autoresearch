@@ -1,0 +1,21 @@
+{
+  "avg_decode_tok_per_s": 28.385913521072826,
+  "avg_latency_ms": 6855.167236163753,
+  "avg_preserve_score": 0.9722222222222222,
+  "avg_quality_score": 0.9042782632104314,
+  "avg_reference_score": 0.8798629217088807,
+  "avg_restraint_score": 0.9024939907399178,
+  "avg_structure_score": 0.9166666666666666,
+  "avg_subcalls": 3.8333333333333335,
+  "avg_ttft_ms": 1767.2922740000001,
+  "backend": "ollama",
+  "benchmark_path": "tools/inference/benchmarks/grammar_fixer_working.jsonl",
+  "controller": "rlm_recursive",
+  "description": "rlm_recursive",
+  "model": "mistral:latest",
+  "num_examples": 18,
+  "p95_latency_ms": 11039.36954200617,
+  "peak_memory_mb": null,
+  "run_name": "004_rlm_recursive",
+  "wall_seconds": 123.5
+}

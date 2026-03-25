@@ -1,0 +1,18 @@
+{
+  "avg_decode_tok_per_s": 28.96937976395471,
+  "avg_latency_ms": 1006.679069278309,
+  "avg_preserve_score": 1.0,
+  "avg_quality_score": 0.9424704496413921,
+  "avg_reference_score": 0.9157173353991346,
+  "avg_restraint_score": 0.9581782617968907,
+  "avg_structure_score": 0.9722222222222222,
+  "avg_subcalls": 1.0,
+  "avg_ttft_ms": 276.4085717222222,
+  "backend": "ollama",
+  "benchmark_path": "tools/inference/benchmarks/grammar_fixer_working.jsonl",
+  "controller": "direct",
+  "model": "mistral:latest",
+  "num_examples": 18,
+  "p95_latency_ms": 1359.7945000074105,
+  "peak_memory_mb": null
+}

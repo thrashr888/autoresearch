@@ -75,6 +75,97 @@ Notes:
 - By default it runs a short calibration pass first, then picks a step count that lands near a fixed 300-second training budget.
 - The printed `val_bpb` is ANE-local: it uses a shorter context length and a smaller validation token budget than upstream, so compare it only against other ANE runs from this fork.
 
+## Inference Autotuning (Apple Silicon)
+
+This repo also now includes an inference autotuning toolkit for local grammar/text-fixer workflows, aimed at Ethertext-style editing on Apple Silicon.
+
+The toolkit lives under `tools/inference/` and supports:
+
+- benchmark prep via `tools/inference/prepare_grammar_bench.py`
+- single-run evaluation via `tools/inference/run_grammar_bench.py`
+- autonomous sweeps via `tools/inference/overnight_grammar.py`
+- unattended launchd runs via `tools/inference/launch_grammar_sweep.sh`
+- a local product wrapper via `tools/inference/studio_server.py`
+
+The first target backend is Ollama, with an optional MLX adapter and a small set of RLM-style controllers (`rlm_lite`, `rlm_adaptive`, `rlm_recursive`) for memory-aware editing experiments.
+
+To try the current best controller on real examples in a browser:
+
+```bash
+uv run tools/inference/studio_server.py
+```
+
+## Active paths
+
+If you ignore older training forks and supporting experiments, the active path in this repo is now:
+
+1. Grammar autotuning
+   - short Ethertext-style cleanup/edit benchmarks
+   - primary files:
+     - `tools/inference/prepare_grammar_bench.py`
+     - `tools/inference/run_grammar_bench.py`
+     - `tools/inference/overnight_grammar.py`
+
+2. RLM editing research
+   - memory-aware editing with glossary/context/distractor constraints
+   - includes stricter recursive-controller experiments and Research Claw Lite comparisons
+   - primary files:
+     - `tools/inference/research_claw_lite.py`
+     - `tools/inference/analyze_rlm_sweep.py`
+     - benchmark files under `tools/inference/benchmarks/`
+
+3. Product case curation / mining
+   - curate real examples, mine failures, and turn them into better benchmarks
+   - primary files:
+     - `tools/inference/curate_product_cases.py`
+     - `tools/inference/mine_failures.py`
+     - tests under `tests/`
+
+4. Studio wrapper
+   - `tools/inference/studio_server.py` and `tools/inference/studio/`
+   - this wraps the whole inference stack so the current best configs can be tried on real text
+
+In short: the repo is functionally centered on `tools/inference/` now.
+
+## Legacy / side paths
+
+These still exist, but they are no longer the clearest "main path" for the repo:
+
+- Core CUDA training loop
+  - `prepare.py`, `train.py`, `program.md`
+  - original upstream-style 5-minute autonomous training loop
+
+- ANE training fork
+  - `prepare_ane.py`, `train_ane.py`, `program_ane.md`, top-level `results.tsv`
+  - Apple Neural Engine training experiments
+  - current branch still reflects this work: `autoresearch/mar11-ane`
+
+- MLX training helpers
+  - `tools/mlx/*`
+  - MLX-only training/sweep support for Apple Silicon
+  - useful, but currently more of a support/experimental path than the repo’s main story
+
+## Possible archive candidates
+
+If you want to simplify the repo later, the most likely archive candidates are:
+
+- top-level training/autoresearch fork files if inference work is now the real product direction:
+  - `prepare.py`
+  - `train.py`
+  - `program.md`
+  - `prepare_ane.py`
+  - `train_ane.py`
+  - `program_ane.md`
+  - top-level `results.tsv`
+
+- MLX training helpers if you want to keep only inference-facing MLX work:
+  - `tools/mlx/*`
+
+I have not deleted anything. If you want, the next cleanup step could be:
+- commit current state
+- push branch
+- move/archive or remove one legacy path at a time
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:

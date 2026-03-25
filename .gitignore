@@ -11,6 +11,25 @@ wheels/
 worktrees/
 results/
 queue/
+runs/
+runs_canary/
+launchd_logs/
+tools/inference/runs/
+tools/inference/runs_canary/
+tools/inference/launchd_logs/
+tools/inference/runs_rlm/
+tools/inference/runs_rlm_canary/
+tools/inference/runs_rlm_smoke/
+tools/inference/runs_rlm_quality/
+tools/inference/runs_rlm_quality_canary_max/
+tools/inference/runs_rlm_blocked_test/
+tools/inference/runs_research_claw/
+tools/inference/runs_qwen35_focus/
+tools/inference/runs_qwen35_focus_canary/
+tools/inference/runs_case_curator/
+tools/inference/studio/logs/
+tools/inference/benchmarks/private/*.jsonl
+!tools/inference/benchmarks/private/*.template.jsonl
 
 # Agent prompt files (generated per-session by launchers)
 CLAUDE.md

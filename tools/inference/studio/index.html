@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RLM Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <canvas id="shader-canvas" class="shader-canvas" aria-hidden="true"></canvas>
+    <main class="shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Memory-Aware Editing Workbench</p>
+          <h1>RLM Studio</h1>
+          <p class="lede">
+            Try quick and deep memory-aware editing routes on real text, with preserve terms, context, and benchmark-style
+            scoring when you need it.
+          </p>
+        </div>
+        <div class="hero-card">
+          <p class="hero-label">Nightly engine</p>
+          <p id="engine-summary" class="engine-summary">Loading...</p>
+          <p id="engine-meta" class="engine-meta"></p>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <section class="panel input-panel">
+          <div class="panel-header">
+            <div>
+              <h2>What needs fixing?</h2>
+              <p class="panel-copy">Keep this simple. Paste the draft, then add exact terms or helpful context only if needed.</p>
+            </div>
+            <label class="sample-picker">
+              <span>Try sample</span>
+              <select id="sample-select">
+                <option value="">Custom</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span>Draft</span>
+            <textarea id="text" rows="9" placeholder="Paste text to fix..."></textarea>
+          </label>
+
+          <div class="actions">
+            <div class="mode-switch" role="group" aria-label="Studio mode">
+              <button id="mode-quick" class="mode-button is-active" type="button" data-mode="quick">Quick</button>
+              <button id="mode-deep" class="mode-button" type="button" data-mode="deep">Deep</button>
+            </div>
+            <button id="run-button" type="button">Run edit</button>
+            <p id="run-status" class="status">Ready.</p>
+          </div>
+
+          <hr class="section-divider" />
+
+          <label>
+            <span>Instruction</span>
+            <textarea id="instruction" rows="2" placeholder="Optional. Example: make this clearer but keep it natural."></textarea>
+          </label>
+
+          <div class="grid two">
+            <label>
+              <span>Keep these exact</span>
+              <input id="preserve-terms" type="text" placeholder="Names, glossary terms, product names" />
+            </label>
+            <label>
+              <span>Helpful context</span>
+              <textarea id="memory" rows="5" placeholder="Optional notes, decisions, style rules, or past details"></textarea>
+            </label>
+          </div>
+
+          <details class="advanced-panel">
+            <summary>Advanced controls</summary>
+            <div class="advanced-grid">
+              <label>
+                <span>Reference text</span>
+                <input id="reference" type="text" placeholder="Optional. Used only for scoring." />
+              </label>
+              <label>
+                <span>Checks</span>
+                <div class="checkboxes">
+                  <label><input id="check-inline" type="checkbox" /> Inline code</label>
+                  <label><input id="check-bullets" type="checkbox" /> Bullets</label>
+                  <label><input id="check-breaks" type="checkbox" /> Line breaks</label>
+                </div>
+              </label>
+              <label>
+                <span>Model preset</span>
+                <select id="model-preset">
+                  <option value="">Promoted default</option>
+                </select>
+              </label>
+              <label>
+                <span>Research mode</span>
+                <select id="controller">
+                  <option value="">Best nightly config</option>
+                  <option value="direct">direct</option>
+                  <option value="memory_flat">memory_flat</option>
+                  <option value="rlm_adaptive">rlm_adaptive</option>
+                  <option value="rlm_lite">rlm_lite</option>
+                  <option value="rlm_recursive">rlm_recursive</option>
+                </select>
+              </label>
+            </div>
+          </details>
+        </section>
+
+        <section class="panel output-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Clean version</h2>
+              <p class="panel-copy">The edited draft stays up front. Benchmarking details are still available when you need them.</p>
+            </div>
+            <div id="metrics" class="metric-row"></div>
+          </div>
+
+          <article class="result-block result-primary">
+            <div class="result-head">
+              <h3>Edited text</h3>
+              <button id="copy-button" class="secondary-button" type="button">Copy</button>
+            </div>
+            <pre id="output">No run yet.</pre>
+          </article>
+
+          <article class="result-block">
+            <h3>Run summary</h3>
+            <ul id="insights" class="insight-list">
+              <li>Paste text and run a pass to see the result summary here.</li>
+            </ul>
+          </article>
+
+          <details class="advanced-panel advanced-output">
+            <summary>Advanced details</summary>
+            <article class="result-block nested-block">
+              <h3>Scores</h3>
+              <pre id="scores">Reference-free run.</pre>
+            </article>
+
+            <article class="result-block nested-block">
+              <h3>Controller debug</h3>
+              <pre id="debug">No debug info yet.</pre>
+            </article>
+
+            <article class="result-block nested-block">
+              <h3>Engine config</h3>
+              <pre id="config-summary">Loading...</pre>
+            </article>
+          </details>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

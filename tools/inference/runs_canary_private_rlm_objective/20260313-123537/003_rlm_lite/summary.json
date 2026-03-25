@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "rlm_lite",
+  "description": "rlm_lite",
+  "error": "benchmark subprocess failed with exit code 1",
+  "model": "mistral:latest",
+  "run_name": "003_rlm_lite",
+  "wall_seconds": 0.1
+}

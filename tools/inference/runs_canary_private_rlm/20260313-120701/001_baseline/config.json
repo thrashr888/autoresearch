@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "direct",
+  "max_tokens": 96,
+  "memory_top_k": 2,
+  "model": "mistral:latest",
+  "num_ctx": 2048,
+  "temperature": 0.0
+}

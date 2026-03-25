@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "rlm_recursive",
+  "description": "rlm_recursive",
+  "error": "benchmark subprocess failed with exit code 1",
+  "model": "mistral:latest",
+  "run_name": "004_rlm_recursive",
+  "wall_seconds": 0.1
+}

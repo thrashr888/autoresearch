@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "memory_flat",
+  "max_tokens": 96,
+  "memory_top_k": 2,
+  "model": "qwen3.5:122b",
+  "num_ctx": 1024,
+  "temperature": 0.0
+}

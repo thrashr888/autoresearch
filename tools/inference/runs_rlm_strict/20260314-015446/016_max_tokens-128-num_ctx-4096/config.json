@@ -1,0 +1,9 @@
+{
+  "backend": "ollama",
+  "controller": "rlm_recursive",
+  "max_tokens": 128,
+  "memory_top_k": 2,
+  "model": "mistral:latest",
+  "num_ctx": 4096,
+  "temperature": 0.0
+}

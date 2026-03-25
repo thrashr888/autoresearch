@@ -1,0 +1,18 @@
+{
+  "avg_decode_tok_per_s": 28.256349424536783,
+  "avg_latency_ms": 5256.492615079668,
+  "avg_preserve_score": 1.0,
+  "avg_quality_score": 0.8744937269732451,
+  "avg_reference_score": 0.8258438001966668,
+  "avg_restraint_score": 0.8347462634242455,
+  "avg_structure_score": 0.9551282051282051,
+  "avg_subcalls": 2.0,
+  "avg_ttft_ms": 1070.7713398461538,
+  "backend": "ollama",
+  "benchmark_path": "tools/inference/benchmarks/rlm_editor_working.jsonl",
+  "controller": "rlm_lite",
+  "model": "mistral:latest",
+  "num_examples": 13,
+  "p95_latency_ms": 6551.109499006998,
+  "peak_memory_mb": null
+}

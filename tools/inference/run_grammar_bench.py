@@ -186,22 +186,30 @@ def select_memory(example: Example, top_k: int) -> list[str]:
     source_terms = set(re.findall(r"[A-Za-z0-9_]+", example.input.lower()))
     source_terms.update(re.findall(r"[A-Za-z0-9_]+", example.instruction.lower()))
     source_terms.update(term.lower().strip("`") for term in example.preserve_terms)
+    source_terms.update(term.lower().strip("`") for term in example.required_terms)
     has_code_constraint = checks.get("preserve_inline_code") or bool(expected_inline_code_spans(example))
     has_bullet_constraint = checks.get("preserve_bullets") or any(is_bullet_line(line) for line in example.input.splitlines())
     has_line_break_constraint = checks.get("preserve_line_breaks")
     weekday_terms = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
     input_terms = set(re.findall(r"[A-Za-z0-9_]+", example.input.lower()))
+    required_terms = {term.lower().strip("`") for term in example.required_terms}
+    preserve_terms = {term.lower().strip("`") for term in example.preserve_terms}
+    style_required_terms = {term for term in required_terms if term and term not in preserve_terms}
     ranked = []
     for item in example.memory:
         lowered = item.lower()
         mem_terms = set(re.findall(r"[A-Za-z0-9_]+", lowered))
         overlap = len(source_terms & mem_terms)
         preserve_hits = sum(1 for term in example.preserve_terms if term.lower().strip("`") in lowered)
-        score = overlap + (2 * preserve_hits)
+        required_hits = sum(1 for term in required_terms if term and term in lowered)
+        style_required_hits = sum(1 for term in style_required_terms if term in lowered)
+        score = overlap + (2 * preserve_hits) + (3 * required_hits) + (8 * style_required_hits)
         if lowered.startswith("preserve "):
             score += 3
         if "style preference" in lowered or lowered.startswith("style:"):
             score += 3
+            if style_required_hits:
+                score += 4
         if "capitalize" in lowered:
             score += 2
         if "unrelated note" in lowered:
@@ -214,8 +222,8 @@ def select_memory(example: Example, top_k: int) -> list[str]:
             score += 4
         if example.preserve_terms and "name" in lowered:
             score += 3
-        if "whether" in lowered and "if" in input_terms:
-            score += 3
+        if "whether" in lowered and ("if" in input_terms or "whether" in required_terms):
+            score += 6
         if ("calendar" in lowered or "weekday" in lowered) and (weekday_terms & input_terms):
             score += 3
         ranked.append((score, item))
@@ -251,6 +259,96 @@ def expected_inline_code_spans(example: Example) -> list[str]:
     return extract_inline_code_spans(example.input)
 
 
+def formatting_guardrails(example: Example) -> list[str]:
+    checks = example.checks or {}
+    guards: list[str] = []
+    nonempty_input_lines = nonempty_lines(example.input)
+    bullet_lines = [line for line in example.input.splitlines() if is_bullet_line(line)]
+    paragraph_count = len([block for block in example.input.split("\n\n") if block.strip()])
+
+    if checks.get("preserve_line_breaks"):
+        guards.append(
+            f"Formatting rule: keep the same number of paragraphs as the input ({paragraph_count}) and do not collapse the text into fewer paragraphs."
+        )
+        guards.append(
+            f"Formatting rule: keep the same number of non-empty lines as the input ({len(nonempty_input_lines)}) unless a line only changes by punctuation or capitalization."
+        )
+    if checks.get("preserve_bullets") or bullet_lines:
+        guards.append(
+            f"Formatting rule: preserve the bullet list and keep all {len(bullet_lines)} bullet items in the output. Do not drop any bullets."
+        )
+    if (checks.get("preserve_bullets") or checks.get("preserve_line_breaks")) and nonempty_input_lines:
+        guards.append(
+            "Formatting rule: return the full corrected text, not a summary and not a partial excerpt from the input."
+        )
+    return guards
+
+
+def needs_linewise_format_preservation(example: Example) -> bool:
+    checks = example.checks or {}
+    return bool(checks.get("preserve_bullets") or checks.get("preserve_line_breaks"))
+
+
+def build_line_edit_prompt(
+    example: Example,
+    line: str,
+    memory: list[str] | None = None,
+    plan: str | None = None,
+) -> str:
+    sections = [
+        SYSTEM_PROMPT,
+        f"Task: {example.instruction}",
+        "You are correcting exactly one line from a larger formatted text.",
+        "Return the full corrected line and nothing else.",
+        "Do not drop content from the line.",
+    ]
+    if is_bullet_line(line):
+        marker = bullet_marker(line) or "-"
+        sections.append(f"Formatting rule: preserve the bullet marker `{marker}` and keep this as a bullet line.")
+    else:
+        sections.append("Formatting rule: keep this as a non-bullet line.")
+    if memory:
+        sections.append("Relevant memory:")
+        sections.extend(f"- {item}" for item in memory)
+    if example.preserve_terms:
+        sections.append("Terms to preserve exactly:")
+        sections.append(", ".join(example.preserve_terms))
+    if plan:
+        sections.append("Editing plan:")
+        sections.append(plan.strip())
+    sections.append("Line:")
+    sections.append(line)
+    sections.append("Corrected line:")
+    return "\n".join(sections)
+
+
+def run_linewise_format_controller(
+    backend: Backend,
+    example: Example,
+    *,
+    memory: list[str],
+    plan: str | None,
+    max_tokens: int,
+    temperature: float,
+    num_ctx: int,
+) -> GenerationResult:
+    calls: list[GenerationResult] = []
+    output_lines: list[str] = []
+    for line in example.input.splitlines():
+        if not line.strip():
+            output_lines.append("")
+            continue
+        result = backend.generate(
+            build_line_edit_prompt(example, line, memory=memory, plan=plan),
+            max_tokens=max_tokens,
+            temperature=temperature,
+            num_ctx=num_ctx,
+        )
+        calls.append(result)
+        output_lines.append(result.text.strip())
+    return combine_results("\n".join(output_lines), calls)
+
+
 def build_direct_prompt(example: Example, memory: list[str] | None = None, plan: str | None = None) -> str:
     sections = [SYSTEM_PROMPT]
     sections.append(f"Task: {example.instruction}")
@@ -259,12 +357,19 @@ def build_direct_prompt(example: Example, memory: list[str] | None = None, plan:
         "Do not turn questions into statements, do not turn requests into commands, and do not expand short words like "
         "'docs' into longer synonyms unless required."
     )
+    sections.extend(formatting_guardrails(example))
     if memory:
         sections.append("Relevant memory:")
         sections.extend(f"- {item}" for item in memory)
     if example.preserve_terms:
         sections.append("Terms to preserve exactly:")
         sections.append(", ".join(example.preserve_terms))
+    if example.required_terms:
+        sections.append("Required terms to include:")
+        sections.append(", ".join(example.required_terms))
+    if example.forbidden_terms:
+        sections.append("Terms to avoid:")
+        sections.append(", ".join(example.forbidden_terms))
     if plan:
         sections.append("Editing plan:")
         sections.append(plan.strip())
@@ -286,6 +391,12 @@ def build_plan_prompt(example: Example, memory: list[str]) -> str:
     if example.preserve_terms:
         sections.append("Terms to preserve exactly:")
         sections.append(", ".join(example.preserve_terms))
+    if example.required_terms:
+        sections.append("Required terms to include:")
+        sections.append(", ".join(example.required_terms))
+    if example.forbidden_terms:
+        sections.append("Terms to avoid:")
+        sections.append(", ".join(example.forbidden_terms))
     sections.append("Text:")
     sections.append(example.input)
     sections.append("Relevant editing constraints:")
@@ -306,6 +417,12 @@ def build_memory_note_prompt(example: Example, memory_item: str) -> str:
     if example.preserve_terms:
         sections.append("Terms to preserve exactly:")
         sections.append(", ".join(example.preserve_terms))
+    if example.required_terms:
+        sections.append("Required terms to include:")
+        sections.append(", ".join(example.required_terms))
+    if example.forbidden_terms:
+        sections.append("Terms to avoid:")
+        sections.append(", ".join(example.forbidden_terms))
     sections.append("Text:")
     sections.append(example.input)
     sections.append("Relevant constraint:")
@@ -325,6 +442,12 @@ def build_merge_plan_prompt(example: Example, notes: list[str]) -> str:
     if example.preserve_terms:
         sections.append("Terms to preserve exactly:")
         sections.append(", ".join(example.preserve_terms))
+    if example.required_terms:
+        sections.append("Required terms to include:")
+        sections.append(", ".join(example.required_terms))
+    if example.forbidden_terms:
+        sections.append("Terms to avoid:")
+        sections.append(", ".join(example.forbidden_terms))
     sections.append("Text:")
     sections.append(example.input)
     sections.append("Merged editing constraints:")
@@ -361,6 +484,7 @@ def build_revision_prompt(example: Example, draft: str, memory: list[str], plan:
         "Return only the revised text and nothing else.",
         f"Task: {example.instruction}",
     ]
+    sections.extend(formatting_guardrails(example))
     if memory:
         sections.append("Relevant memory:")
         sections.extend(f"- {item}" for item in memory)
@@ -724,9 +848,31 @@ def run_controller(
     selected_memory = select_memory(example, memory_top_k)
     debug: dict[str, Any] = {"selected_memory": selected_memory}
     if controller == "direct":
+        if needs_linewise_format_preservation(example):
+            debug["route"] = "linewise_direct"
+            return run_linewise_format_controller(
+                backend,
+                example,
+                memory=[],
+                plan=None,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                num_ctx=num_ctx,
+            ), debug
         prompt = build_direct_prompt(example)
         return backend.generate(prompt, max_tokens=max_tokens, temperature=temperature, num_ctx=num_ctx), debug
     if controller == "memory_flat":
+        if needs_linewise_format_preservation(example):
+            debug["route"] = "linewise_memory_flat"
+            return run_linewise_format_controller(
+                backend,
+                example,
+                memory=selected_memory,
+                plan=None,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                num_ctx=num_ctx,
+            ), debug
         prompt = build_direct_prompt(example, memory=selected_memory)
         return backend.generate(prompt, max_tokens=max_tokens, temperature=temperature, num_ctx=num_ctx), debug
     if controller == "rlm_adaptive":
@@ -802,11 +948,29 @@ def run_controller(
         plan_prompt = build_plan_prompt(example, selected_memory)
         plan_result = backend.generate(
             plan_prompt,
-            max_tokens=min(96, max_tokens),
+            max_tokens=max_tokens,
             temperature=0.0,
             num_ctx=num_ctx,
         )
         debug["plan"] = plan_result.text
+        if needs_linewise_format_preservation(example):
+            debug["route"] = "linewise_rlm_lite"
+            final_result = run_linewise_format_controller(
+                backend,
+                example,
+                memory=selected_memory,
+                plan=plan_result.text,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                num_ctx=num_ctx,
+            )
+            final_result.latency_ms += plan_result.latency_ms
+            final_result.subcalls = plan_result.subcalls + final_result.subcalls
+            if plan_result.ttft_ms is not None and final_result.ttft_ms is not None:
+                final_result.ttft_ms += plan_result.ttft_ms
+            if plan_result.peak_memory_mb and final_result.peak_memory_mb:
+                final_result.peak_memory_mb = max(plan_result.peak_memory_mb, final_result.peak_memory_mb)
+            return final_result, debug
         final_prompt = build_direct_prompt(example, memory=selected_memory, plan=plan_result.text)
         final_result = backend.generate(
             final_prompt,

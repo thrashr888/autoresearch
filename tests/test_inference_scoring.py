@@ -53,3 +53,49 @@ def test_score_example_penalizes_non_reference_synonym_swap() -> None:
 
     assert aligned["drift_score"] > drifted["drift_score"]
     assert aligned["strict_quality_score"] > drifted["strict_quality_score"]
+
+
+def test_select_memory_prioritizes_required_style_constraints() -> None:
+    example = mod.Example(
+        id="style-pref",
+        instruction="Fix the sentence using the stored style preference and preserve glossary terms exactly.",
+        input="im not sure if autoresearch should default to ane on this mac yet but its worth testing",
+        reference="I'm not sure whether autoresearch should default to ANE on this Mac yet, but it's worth testing.",
+        memory=[
+            "User style preference: prefer 'whether' over 'if' in formal writing.",
+            "Preserve glossary terms exactly: autoresearch, ANE, Mac.",
+            "Keep the uncertainty in the sentence.",
+        ],
+        preserve_terms=["autoresearch", "ANE", "Mac"],
+        required_terms=["whether", "autoresearch", "ANE", "Mac"],
+        forbidden_terms=["definitely", "certainly"],
+        checks={},
+        metadata={"difficulty": "hard"},
+    )
+
+    selected = mod.select_memory(example, top_k=1)
+
+    assert selected == ["User style preference: prefer 'whether' over 'if' in formal writing."]
+
+
+def test_build_direct_prompt_includes_required_and_forbidden_terms() -> None:
+    example = mod.Example(
+        id="prompt-constraints",
+        instruction="Fix the sentence using the stored style preference and preserve glossary terms exactly.",
+        input="im not sure if autoresearch should default to ane on this mac yet but its worth testing",
+        reference="I'm not sure whether autoresearch should default to ANE on this Mac yet, but it's worth testing.",
+        memory=[],
+        preserve_terms=["autoresearch", "ANE", "Mac"],
+        required_terms=["whether", "autoresearch", "ANE", "Mac"],
+        forbidden_terms=["definitely", "certainly"],
+        checks={},
+        metadata={},
+    )
+
+    prompt = mod.build_direct_prompt(example)
+
+    assert "Terms to preserve exactly:" in prompt
+    assert "Required terms to include:" in prompt
+    assert "Terms to avoid:" in prompt
+    assert "whether, autoresearch, ANE, Mac" in prompt
+    assert "definitely, certainly" in prompt
